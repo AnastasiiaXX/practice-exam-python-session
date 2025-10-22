@@ -4,7 +4,6 @@ from models.project import Project
 from models.user import User
 from datetime import datetime
 
-
 class DatabaseManager:
     def __init__(self, db_path="tasks.db") -> None:
         self.conn = sqlite3.connect(db_path)
@@ -64,12 +63,13 @@ class DatabaseManager:
             ))
         self.conn.commit()
         task.id = self.cursor.lastrowid
+        return task.id
 
     def get_task_by_id(self, task_id) -> Task | None:
         self.cursor.execute('SELECT * FROM tasks WHERE id = ?', (task_id,))
         row = self.cursor.fetchone()
         if row:
-            return Task(
+            task = Task(
                 title=row[1],
                 description=row[2],
                 priority=row[3],
@@ -123,9 +123,9 @@ class DatabaseManager:
         self.cursor.execute(
             '''
             SELECT * FROM tasks
-            WHERE title LIKE ?
+            WHERE title LIKE ? OR description LIKE ?
             ''',
-            (f'%{query}%',)
+            (f'%{query}%', f'%{query}%')
         )
         rows = self.cursor.fetchall()
         results = []
@@ -146,34 +146,38 @@ class DatabaseManager:
     def get_tasks_by_project(self, project_id) -> list[Task]:
         self.cursor.execute('SELECT * FROM tasks WHERE project_id = ?', (project_id,))
         rows = self.cursor.fetchall()
-        return [
-            Task(
+        tasks = []
+        for row in rows:
+            task = Task(
                 title=row[1],
                 description=row[2],
                 priority=row[3],
-                status=row[4],
-                due_date=row[5],
+                due_date=datetime.strptime(row[5], "%Y-%m-%d %H:%M:%S"),
                 project_id=row[6],
                 assignee_id=row[7]
             )
-            for row in rows
-        ]
+            task.id = row[0]
+            task.status = row[4]
+            tasks.append(task)
+        return tasks
 
     def get_tasks_by_user(self, user_id) -> list[Task]:
         self.cursor.execute('SELECT * FROM tasks WHERE assignee_id = ?', (user_id,))
         rows = self.cursor.fetchall()
-        return [
-            Task(
+        tasks = []
+        for row in rows:
+            task = Task(
                 title=row[1],
                 description=row[2],
                 priority=row[3],
-                status=row[4],
-                due_date=row[5],
+                due_date=datetime.strptime(row[5], "%Y-%m-%d %H:%M:%S"),
                 project_id=row[6],
                 assignee_id=row[7]
             )
-            for row in rows
-        ]
+            task.id = row[0]
+            task.status = row[4]
+            tasks.append(task)
+        return tasks
 
     def add_project(self, project: Project) -> int:
         self.cursor.execute(
@@ -189,7 +193,7 @@ class DatabaseManager:
             ))
         self.conn.commit()
         project.id = self.cursor.lastrowid
-
+        return project.id
 
     def get_project_by_id(self, project_id) -> Project | None:
         self.cursor.execute('SELECT * FROM projects WHERE id = ?', (project_id,))
@@ -252,6 +256,7 @@ class DatabaseManager:
             ))
         self.conn.commit()
         user.id = self.cursor.lastrowid
+        return user.id
 
     def get_user_by_id(self, user_id) -> User | None:
         self.cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))

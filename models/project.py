@@ -25,11 +25,11 @@ class Project:
         progress = (elapsed_time / total_time) * 100
 
         if progress < 0:
-            progress = 0
+            progress = 0.0
         elif progress > 100:
-            progress = 100
+            progress = 100.0
 
-        return int(progress)
+        return progress
 
     def to_dict(self):
         return {
