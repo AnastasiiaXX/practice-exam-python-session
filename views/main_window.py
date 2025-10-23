@@ -30,7 +30,8 @@ class MainWindow(tk.Tk):
         # Вкладка проектов
         self.project_view = ProjectView(
             self,
-            project_controller
+            project_controller,
+            task_controller
         )
         self.tab_control.add(self.project_view, text="Проекты")
 

@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, simpledialog
 
 ROLES = ['admin', 'manager', 'developer']
 
@@ -34,11 +34,17 @@ class UserView(ttk.Frame):
         self.role_entry.grid(row=2, column=1, sticky="ew")
         self.role_entry.set(ROLES[0])
 
+        ttk.Button(form_frame, text="Показать задачи", command=self.show_user_tasks).grid(
+            row=5, column=0, columnspan=2, pady=5)
+
         add_btn = ttk.Button(form_frame, text="Добавить", command=self.add_user)
         add_btn.grid(row=3, column=0, columnspan=2, pady=5)
 
         delete_btn = ttk.Button(form_frame, text="Удалить выбранных", command=self.delete_selected)
         delete_btn.grid(row=4, column=0, columnspan=2, pady=5)
+
+        edit_btn = ttk.Button(form_frame, text="Редактировать выбранного", command=self.edit_selected)
+        edit_btn.grid(row=6, column=0, columnspan=2, pady=5)
 
         # Таблица пользователей
         self.tree = ttk.Treeview(self, columns=("id", "username", "email", "role"), show="headings")
@@ -83,3 +89,44 @@ class UserView(ttk.Frame):
             self.user_controller.delete_user(user_id)
 
         self.refresh_users()
+
+    def edit_selected(self) -> None:
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showwarning("Ошибка", "Выберите пользователя для редактирования")
+            return
+
+        values = self.tree.item(selected[0], "values")
+        user_id = int(values[0])
+        user = self.user_controller.get_user(user_id)
+
+        if not user:
+            messagebox.showerror("Ошибка", "Не удалось найти пользователя")
+            return
+
+        new_username = simpledialog.askstring("Редактировать данные пользователя", "Новое имя:", initialvalue=user.username)
+        new_email = simpledialog.askstring("Редактировать данные пользователя", "Новый e-mail:", initialvalue=user.email)
+        new_role = simpledialog.askstring("Редактировать данные пользователя",f"Роль ({', '.join(ROLES)}):", initialvalue=user.role)
+
+        if new_username and new_email and new_role in ROLES:
+            self.user_controller.update_user(user.id, username=new_username, email=new_email, role=new_role)
+            self.refresh_users()
+            messagebox.showinfo("Успех", "Данные пользователя обновлены")
+        else:
+            messagebox.showwarning("Ошибка", "Поля не заполнены или роль некорректна")
+
+    def show_user_tasks(self) -> None:
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showwarning("Ошибка", "Выберите пользователя для просмотра задач")
+            return
+
+        values = self.tree.item(selected[0], "values")
+        user_id = int(values[0])
+        tasks = self.user_controller.get_user_tasks(user_id)
+        if not tasks:
+            messagebox.showinfo("Информация", "У этого пользователя нет задач")
+            return
+
+        task_list = "\n".join(f"{t.title} ({t.status})" for t in tasks)
+        messagebox.showinfo("Задачи пользователя", task_list)

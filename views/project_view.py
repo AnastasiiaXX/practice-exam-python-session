@@ -1,11 +1,12 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, simpledialog
 from datetime import datetime
 
 class ProjectView(ttk.Frame):
-    def __init__(self, parent, project_controller) -> None:
+    def __init__(self, parent, project_controller, task_controller) -> None:
         super().__init__(parent)
         self.project_controller = project_controller
+        self.task_controller = task_controller
 
         # Поля ввода
         self.name_entry = None
@@ -39,6 +40,16 @@ class ProjectView(ttk.Frame):
 
         ttk.Button(form_frame, text="Добавить проект", command=self.add_project).grid(
             row=4, column=0, columnspan=2, pady=5
+        )
+
+        ttk.Button(form_frame, text="Редактировать выбранный", command=self.edit_selected).grid(
+            row=5, column=0, columnspan=2, pady=5
+        )
+        ttk.Button(form_frame, text="Удалить выбранные", command=self.delete_selected).grid(
+            row=6, column=0, columnspan=2, pady=5
+        )
+        ttk.Button(form_frame, text="Показать задачи", command=self.show_tasks).grid(
+            row=7, column=0, columnspan=2, pady=5
         )
 
         # Таблица проектов
@@ -99,3 +110,55 @@ class ProjectView(ttk.Frame):
                     self.project_controller.delete_project(project.id)
                     break
         self.refresh_projects()
+
+    def edit_selected(self) -> None:
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showwarning("Ошибка", "Выберите проект для редактирования")
+            return
+
+        item = selected[0]
+        values = self.tree.item(item, "values")
+        project_name = values[0]
+
+        # Находим объект проекта
+        project = next((p for p in self.project_controller.get_all_projects() if p.name == project_name), None)
+        if not project:
+            messagebox.showerror("Ошибка", "Проект не найден")
+            return
+
+        # Ввод новых данных
+        new_name = simpledialog.askstring("Редактировать проект", "Новое название:", initialvalue=project.name)
+        new_desc = simpledialog.askstring("Редактировать проект", "Новое описание:", initialvalue=project.description)
+
+        if new_name and new_desc:
+            project.name = new_name
+            project.description = new_desc
+            self.project_controller.update_project(project)
+            self.refresh_projects()
+            messagebox.showinfo("Успех", "Проект обновлён")
+
+    def show_tasks(self) -> None:
+        selected = self.tree.selection()
+        if not selected:
+            messagebox.showwarning("Ошибка", "Выберите проект для просмотра задач")
+            return
+
+        item = selected[0]
+        project_name = self.tree.item(item, "values")[0]
+
+        # Находим объект проекта
+        project = next((p for p in self.project_controller.get_all_projects() if p.name == project_name), None)
+        if not project:
+            messagebox.showerror("Ошибка", "Проект не найден")
+            return
+
+        # Используем TaskController
+        tasks = self.task_controller.get_tasks_by_project(project.id)
+        if not tasks:
+            messagebox.showinfo("Задачи проекта", "В проекте нет задач")
+            return
+
+        tasks_str = "\n".join(f"{t.title} ({t.status})" for t in tasks)
+        messagebox.showinfo(f"Задачи проекта '{project.name}'", tasks_str)
+

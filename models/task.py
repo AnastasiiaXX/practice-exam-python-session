@@ -18,6 +18,7 @@ class Task:
         self.project_id = project_id
         self.assignee_id = assignee_id
 
+
     def update_status(self, new_status) -> bool:
         allowed_statuses = ['pending', 'in_progress', 'completed']
 
